@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} { allow read, write: if false; }
+
+    // --- Helper Functions ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isAdmin() { 
+      return isVerified() && 
+      (request.auth.token.email == "hayagreevan.k.2025.csbs@rajalakshmi.edu.in" || 
+       exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- Validation Blueprints ---
+    function isValidBridge(data) {
+      return data.keys().hasAll(['id', 'name', 'location', 'type', 'status', 'lat', 'lng']) &&
+             data.id is string && data.id.size() <= 64 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.location is string && data.location.size() <= 200 &&
+             data.type in ['Marine Bridge', 'River Bridge', 'Flyover', 'Arch Bridge', 'Dam Bridge', 'Railway Bridge', 'Canyon Bridge', 'City Bridge'] &&
+             data.status in ['GREEN', 'AMBER', 'RED'] &&
+             data.lat is number && data.lng is number;
+    }
+
+    function isValidInspection(data) {
+      return data.keys().hasAll(['severity', 'notes', 'date']) &&
+             data.severity in ['OK', 'WATCH', 'CONCERN', 'CRITICAL'] &&
+             data.notes is string && data.notes.size() <= 2000 &&
+             data.date is string;
+    }
+
+    function isValidCalibration(data) {
+      return data.keys().hasAll(['date', 'technician', 'notes']) &&
+             data.date is string &&
+             data.technician is string && data.technician.size() <= 100 &&
+             data.notes is string && data.notes.size() <= 1000;
+    }
+
+    function isValidAlert(data) {
+      return data.keys().hasAll(['type', 'message', 'date']) &&
+             data.type is string &&
+             data.message is string && data.message.size() <= 500 &&
+             data.date is string;
+    }
+
+    function isValidHistory(data) {
+      return data.keys().hasAll(['year', 'event']) &&
+             data.year is string && data.year.size() <= 10 &&
+             data.event is string && data.event.size() <= 500;
+    }
+
+    // --- Resources ---
+    match /bridges/{bridgeId} {
+      allow read: if true; // Public structural health data
+      allow create: if (isAdmin() || !isSignedIn()) && isValidBridge(incoming()) && isValidId(bridgeId); // Allow server seeding
+      allow update: if (
+        isAdmin() || 
+        isVerified() || 
+        (!isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'monitorInfo', 'history', 'weather']))
+      ) && (
+        incoming().id == existing().id
+      );
+      allow delete: if isAdmin();
+
+      match /readings/{readingId} {
+        allow read: if true;
+        allow create: if true; // Sensors often post anonymously or via system
+      }
+
+      match /inspections/{inspectionId} {
+        allow read: if true;
+        allow create: if isVerified() && isValidInspection(incoming()) && isValidId(inspectionId);
+        allow write: if isAdmin();
+      }
+
+      match /calibrations/{calibrationId} {
+        allow read: if true;
+        allow create: if isVerified() && isValidCalibration(incoming()) && isValidId(calibrationId);
+        allow write: if isAdmin();
+      }
+
+      match /alerts/{alertId} {
+        allow read: if true;
+        allow create: if true; // System creates alerts
+        allow update: if isVerified() && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['dismissed'])
+        );
+        allow delete: if isAdmin();
+      }
+
+      match /history/{historyId} {
+        allow read: if true;
+        allow write: if isAdmin() && isValidHistory(incoming());
+      }
+
+      match /manual_readings/{readingId} {
+        allow read: if true;
+        allow write: if isVerified();
+      }
+    }
+
+    // Support for collectionGroup queries on alerts
+    match /{path=**}/alerts/{alertId} {
+      allow read: if true;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; 
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "PulseBridge Sensor Cloud",
+  "description": "A real-time structural health and risk monitoring platform for bridges, integrating sensor data with manual inspections to provide unified safety alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

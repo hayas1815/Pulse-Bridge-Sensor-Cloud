@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "Bridge": {
+      "title": "Bridge",
+      "description": "Represents a physical bridge being monitored.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { 
+          "type": "string", 
+          "enum": ["Marine Bridge", "River Bridge", "Flyover", "Arch Bridge", "Dam Bridge", "Railway Bridge", "Canyon Bridge", "City Bridge"]
+        },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "status": { "type": "string", "enum": ["GREEN", "AMBER", "RED"] },
+        "monitorInfo": {
+          "type": "object",
+          "properties": {
+            "vibrationThreshold": { "type": "number" },
+            "tiltThreshold": { "type": "number" },
+            "waterLevelThreshold": { "type": "number" },
+            "sensorId": { "type": "string" },
+            "installationDate": { "type": "string" },
+            "lastCalibration": { "type": "string" }
+          }
+        },
+        "weather": {
+          "type": "object",
+          "properties": {
+            "temp": { "type": "number" },
+            "windSpeed": { "type": "number" },
+            "condition": { "type": "string" },
+            "humidity": { "type": "number" },
+            "visibility": { "type": "number" },
+            "lastUpdated": { "type": "string", "format": "date-time" }
+          }
+        }
+      },
+      "required": ["id", "name", "location", "type", "status"]
+    },
+    "SensorReading": {
+      "title": "Sensor Reading",
+      "description": "Log of sensor values from a bridge.",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "vibration": { "type": "number" },
+        "tilt": { "type": "number" },
+        "waterLevel": { "type": "number" }
+      },
+      "required": ["timestamp"]
+    },
+    "Inspection": {
+      "title": "Inspection",
+      "description": "Manual inspection report by an engineer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "severity": { "type": "string", "enum": ["OK", "WATCH", "CONCERN", "CRITICAL"] },
+        "notes": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["severity", "notes", "date"]
+    },
+    "Calibration": {
+      "title": "Calibration",
+      "description": "Sensor calibration event log.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "technician": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["date", "technician"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "Structural or system warning alert.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "dismissed": { "type": "boolean" }
+      },
+      "required": ["type", "message", "date"]
+    },
+    "BridgeHistory": {
+      "title": "Bridge History",
+      "description": "Historical milestone or event for a bridge.",
+      "type": "object",
+      "properties": {
+        "year": { "type": "string" },
+        "event": { "type": "string" }
+      },
+      "required": ["year", "event"]
+    }
+  },
+  "firestore": {
+    "bridges/{bridgeId}": {
+      "schema": "Bridge",
+      "description": "Bridge master data"
+    },
+    "bridges/{bridgeId}/readings": {
+      "schema": "SensorReading",
+      "description": "Time-series sensor data"
+    },
+    "bridges/{bridgeId}/inspections": {
+      "schema": "Inspection",
+      "description": "Manual inspection logs"
+    },
+    "bridges/{bridgeId}/calibrations": {
+      "schema": "Calibration",
+      "description": "Sensor calibration history"
+    },
+    "bridges/{bridgeId}/alerts": {
+      "schema": "Alert",
+      "description": "Bridge-specific alerts"
+    },
+    "bridges/{bridgeId}/history": {
+      "schema": "BridgeHistory",
+      "description": "Lifecycle events and historical milestones"
+    }
+  }
+}
